@@ -1,21 +1,32 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(rdws_cloud_platform_r)
-
+## event-detect-node
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
+#通常情况下，ROS都是通过GCC进行编译的，在ros环境下进行硬件加速时，需要引入cuda的编译支持
+enable_language(CUDA)
+
+set(CMAKE_CXX_COMPILIER "/usr/bin/g++")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O3 -Wno-write-strings")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath -Wl,$ORIGIN")
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  ros_cpp
-  ros_py
+  cv_bridge
+  image_transport
+  roscpp
   std_msgs
+  sensor_msgs
+  message_generation
+  message_runtime
 )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-
+find_package(CUDA REQUIRED)
+find_package(OpenCV REQUIRED)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -47,11 +58,11 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+  FILES
+  Target.msg
+  TargetArray.msg
+)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -68,10 +79,11 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  sensor_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -105,7 +117,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES rdws_cloud_platform_r
-#  CATKIN_DEPENDS ros_cpp ros_py std_msgs
+#  CATKIN_DEPENDS cv_bridge image_transport roscpp sensor_msgs std_msgs
 #  DEPENDS system_lib
 )
 
@@ -119,21 +131,48 @@ include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
 )
+include_directories(include ${OpenCV_INCLUDE_DIRS})
+include_directories(include ${CUDA_INCLUDE_DIRS})
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/rdws_cloud_platform_r.cpp
 # )
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Ofast -g -Wfatal-errors -D_MWAITXINTRIN_H_INCLUDED")
+cuda_add_library(myplugins SHARED src/yololayer.cu)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
 # add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(myplugins nvinfer cudart)
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
+
 # add_executable(${PROJECT_NAME}_node src/rdws_cloud_platform_r_node.cpp)
+#cuda_add_executable(yolov5_ros src/calibrator.cpp src/yolov5_v.cpp src/preprocess.cu)
+#add_executable(rdws_cloud_platform_r_node src/rdws_cloud_platform_r_node.cpp)
+
+cuda_add_executable(yolov5_ros src/calibrator.cpp src/yolov5_rospub.cpp src/preprocess.cu)
+target_link_libraries(yolov5_ros ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(yolov5_ros nvinfer)
+target_link_libraries(yolov5_ros cudart)
+target_link_libraries(yolov5_ros myplugins)
+target_link_libraries(yolov5_ros ${OpenCV_LIBS})
+
+cuda_add_executable(yolov5_ros_mono src/calibrator.cpp src/yolov5_rospub_mono.cpp src/preprocess.cu)
+target_link_libraries(yolov5_ros_mono ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(yolov5_ros_mono nvinfer)
+target_link_libraries(yolov5_ros_mono cudart)
+target_link_libraries(yolov5_ros_mono myplugins)
+target_link_libraries(yolov5_ros_mono ${OpenCV_LIBS})
+
+#add_dependencies(rdws_cloud_platform_r_node rdws_cloud_platform_r_gencpp)
+
+add_executable(test_jetson src/test_jetson_mono.cpp)
+target_link_libraries(test_jetson ${OpenCV_LIBS} ${OpenCV_LIBRARIES})
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -145,7 +184,7 @@ include_directories(
 ## same as for the library above
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-## Specify libraries to link a library or executable target against
+## Specify libraries to link a library or executable target against 
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )

@@ -1,0 +1,14 @@
+<launch>
+
+    <arg name="arg_type" default="-v"/>
+    <arg name="engine" default="$(find rdws_cloud_platform_r)/weight/s_self_built_correct_baseline.engine"/>
+    
+    <param name="robot_name" type="string" value="wheeltec-zed2i-1"/>
+    
+    <!--加载rosbridge-->
+    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
+
+    <!--加载检测节点-->
+    <node pkg="rdws_cloud_platform_r" type="yolov5_ros" name="detect_image_node" args="$(arg arg_type) $(arg engine)" output="screen"/>
+
+</launch>
