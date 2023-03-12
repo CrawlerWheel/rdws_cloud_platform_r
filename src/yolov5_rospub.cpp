@@ -9,8 +9,8 @@
 #include <image_transport/image_transport.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <cv_bridge/cv_bridge.h>
-#include "opencv_test/Target.h"
-#include "opencv_test/TargetArray.h"
+#include "rdws_cloud_platform_r/Target.h"
+#include "rdws_cloud_platform_r/TargetArray.h"
 
 #define USE_FP16  // set USE_INT8 or USE_FP16 or USE_FP32
 #define DEVICE 0  // GPU id
@@ -295,7 +295,7 @@ int main(int argc, char** argv) {
     ros::init(argc,argv,"detect_image_node");//这个将会作为节点名---------------------------------------
     ros::NodeHandle n;
     image_transport::ImageTransport it(n);
-    ros::Publisher pubTarget=n.advertise<opencv_test::TargetArray>("/detect/MarkInfo",1);
+    ros::Publisher pubTarget=n.advertise<rdws_cloud_platform_r::TargetArray>("/detect/MarkInfo",1);
     //ros::Publisher pubTarget=n.advertise<sensor_msgs::CompressedImage>("/detect/MarkInfo",1);
     image_transport::Publisher pubDetectImage=it.advertise("/detect/Image",1);
     ros::Rate loop_rate(15);
@@ -375,8 +375,8 @@ int main(int argc, char** argv) {
     while(ros::ok())
     {
         cv::Mat frame;
-        //std::vector<opencv_test::Target> target_vector;
-        opencv_test::TargetArray target_array;
+        //std::vector<rdws_cloud_platform_r::Target> target_vector;
+        rdws_cloud_platform_r::TargetArray target_array;
 
         capture >> frame;
         if(frame.empty())
@@ -430,7 +430,7 @@ int main(int argc, char** argv) {
                 //cv::putText(frame, jetson_fps, cv::Point(11,80), cv::FONT_HERSHEY_PLAIN, 3, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
                 
                 //prepare message target_array
-                opencv_test::Target target;
+                rdws_cloud_platform_r::Target target;
                 target.id = (int)res[j].class_id;
 				target.prob = 1.0;
 				target.x = r.x + r.width/2;
